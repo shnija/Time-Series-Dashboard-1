@@ -1,8 +1,11 @@
 ---
-title: "Activity I Markdown"
+title: "Forecasts of Pesticide use on Invasive Plants"
+subtitle: "Tongariro National Park, NZ"
 author: "Shaan Parsotam"
-date: "2026-11-16"
-output: html_document
+date: "2024-09-05"
+output:
+  html_document:
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
@@ -17,14 +20,7 @@ library(ggfortify)
 library(lme4)
 library(nlme)
 ```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
+```{r heather, include=FALSE}
 setwd("C:/Users/shaan/Documents/Shiny Dashboard (R Project)")
 data <- as_tibble(read.csv("heather.csv", header=TRUE))
 
@@ -82,7 +78,8 @@ colours <- c("Heather" = "#d091e5", "Native.dicots" = "#af3d08", "Native.monocot
 for(i in 2013:2050){
   dataGrouped <- bind_rows(dataGrouped, predictPlantDF(i))
 }
-
+```
+```{r ui}
 ui <- fluidPage(
   titlePanel("Estimation of Plant Groundcover at Tongariro"),
   sidebarLayout(
@@ -101,7 +98,8 @@ ui <- fluidPage(
               )
   )
 )
-
+```
+```{r server}
 server <- function(input, output){
   output$table <- renderTable({
     rt <- cbind(dataGrouped["Year"], dataGrouped["Treat"], dataGrouped[input$userPlant])
@@ -132,6 +130,7 @@ server <- function(input, output){
       theme_minimal()
   })
 }
-
+```
+```{r shinyAppInit}
 shinyApp(ui=ui, server=server)
 ```
