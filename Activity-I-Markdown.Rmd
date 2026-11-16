@@ -4,7 +4,7 @@ subtitle: "Tongariro National Park, NZ"
 author: "Shaan Parsotam"
 date: "2024-09-05"
 output:
-  html_document:
+  rmarkdown::github_document:
     code_folding: hide
 ---
 
