@@ -4,8 +4,9 @@ subtitle: "Tongariro National Park, NZ"
 author: "Shaan Parsotam"
 date: "2024-09-05"
 output:
-  github_document:
+  html_document:
     code_folding: hide
+runtime: shiny
 ---
 
 ```{r setup, include=FALSE}
@@ -80,7 +81,7 @@ for(i in 2013:2050){
 }
 ```
 ```{r ui}
-ui <- fluidPage(
+fluidPage(
   titlePanel("Estimation of Plant Groundcover at Tongariro"),
   sidebarLayout(
     sidebarPanel(
@@ -100,37 +101,35 @@ ui <- fluidPage(
 )
 ```
 ```{r server}
-server <- function(input, output){
-  output$table <- renderTable({
-    rt <- cbind(dataGrouped["Year"], dataGrouped["Treat"], dataGrouped[input$userPlant])
-    rt[rt$Year==input$userYear,]
-  })
+output$table <- renderTable({
+  rt <- cbind(dataGrouped["Year"], dataGrouped["Treat"], dataGrouped[input$userPlant])
+  rt[rt$Year==input$userYear,]
+})
   
-  output$plot <- renderPlot({
-      dataGrouped <- dataGrouped %>%
-        filter(Year <= input$userYear)
-      if(input$userPlant=="Heather"){p <- ggplot(dataGrouped, aes(Year, 100*Heather))}
-      if(input$userPlant=="Exotic.dicots"){p <- ggplot(dataGrouped, aes(Year, 100*Exotic.dicots))}
-      if(input$userPlant=="Exotic.monocots"){p <- ggplot(dataGrouped, aes(Year, 100*Exotic.monocots))}
-      if(input$userPlant=="Native.dicots"){p <- ggplot(dataGrouped, aes(Year, 100*Native.dicots))}
-      if(input$userPlant=="Native.monocots"){p <- ggplot(dataGrouped, aes(Year, 100*Native.monocots))}
-      if(input$userPlant=="Bryophytes"){p <- ggplot(dataGrouped, aes(Year, 100*Bryophytes))}
-      if(input$userPlant=="Lichen"){p <- ggplot(dataGrouped, aes(Year, 100*Lichen))}
-      if(input$userPlant=="Clubmoss"){p <- ggplot(dataGrouped, aes(Year, 100*Clubmoss))}
-      if(input$userPlant=="bare"){p <- ggplot(dataGrouped, aes(Year, 100*bare))}
-      if(input$userPlant=="litter"){p <- ggplot(dataGrouped, aes(Year, 100*litter))}
-      p + geom_line(aes(linetype=Treat, colour=input$userPlant)) +
-      labs(title=paste("Average Proportion of", input$userPlant," under Treatments"),
-           y="Average Groundcover (%)") +
+output$plot <- renderPlot({
+  dataGrouped <- dataGrouped %>%
+    filter(Year <= input$userYear)
+  
+    if(input$userPlant=="Heather"){p <- ggplot(dataGrouped, aes(Year, 100*Heather))}
+    if(input$userPlant=="Exotic.dicots"){p <- ggplot(dataGrouped, aes(Year, 100*Exotic.dicots))}
+    if(input$userPlant=="Exotic.monocots"){p <- ggplot(dataGrouped, aes(Year, 100*Exotic.monocots))}
+    if(input$userPlant=="Native.dicots"){p <- ggplot(dataGrouped, aes(Year, 100*Native.dicots))}
+    if(input$userPlant=="Native.monocots"){p <- ggplot(dataGrouped, aes(Year, 100*Native.monocots))}
+    if(input$userPlant=="Bryophytes"){p <- ggplot(dataGrouped, aes(Year, 100*Bryophytes))}
+    if(input$userPlant=="Lichen"){p <- ggplot(dataGrouped, aes(Year, 100*Lichen))}
+    if(input$userPlant=="Clubmoss"){p <- ggplot(dataGrouped, aes(Year, 100*Clubmoss))}
+    if(input$userPlant=="bare"){p <- ggplot(dataGrouped, aes(Year, 100*bare))}
+    if(input$userPlant=="litter"){p <- ggplot(dataGrouped, aes(Year, 100*litter))}
+    
+    p + geom_line(aes(linetype=Treat, colour=input$userPlant)) + 
+      labs(title=paste("Average Proportion of", input$userPlant," under Treatments"), y="Average Groundcover (%)") + 
       ylim(0, 100) +
-      geom_vline(xintercept=2012) +
-      scale_colour_manual(values=colours) +
-      annotate("text", x=2009, y=80, label="Actual data") +
-      annotate("text", x=(2013 + (input$userYear-2013)/2), y=80, label="Predicted data") +
+      geom_vline(xintercept=2012) + 
+      scale_colour_manual(values=colours) + 
+      annotate("text", x=2009, y=80, label="Actual data") + 
+      annotate("text", x=(2013 + (input$userYear-2013)/2), y=80, label="Predicted data") + 
       theme_minimal()
   })
-}
-```
-```{r shinyAppInit}
-shinyApp(ui=ui, server=server)
+
+plotOutput("table", height = "800px")
 ```
