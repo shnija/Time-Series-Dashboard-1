@@ -1,0 +1,137 @@
+---
+title: "Activity I Markdown"
+author: "Shaan Parsotam"
+date: "2026-11-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(feasts)
+library(tsibble)
+library(ggfortify)
+library(lme4)
+library(nlme)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+setwd("C:/Users/shaan/Documents/Shiny Dashboard (R Project)")
+data <- as_tibble(read.csv("heather.csv", header=TRUE))
+
+dataGrouped <- data %>%
+  group_by(Year, Treat) %>%
+  summarise(Heather = mean(Heather),
+            Exotic.dicots = mean(Exotic.dicots),
+            Exotic.monocots = mean(Exotic.monocots),
+            Native.dicots = mean(Native.dicots),
+            Native.monocots = mean(Native.monocots),
+            Bryophytes = mean(Bryophytes),
+            Lichen = mean(Lichen),
+            Clubmoss = mean(Clubmoss),
+            bare = mean(bare),
+            litter = mean(litter))
+
+dataGrouped <- tsibble(dataGrouped, key=Treat, index=Year) # index is for the time series
+
+##---- predictPlant(): return a vector of predict value for a given plant and all four treatments ----##
+predictPlant <- function(var, year){
+  model <- lm(var ~ Treat*Year, data=dataGrouped)
+  pred_list <- rep(0, 4)
+  predictTreat <- c("B", "H", "HB", "C")
+  for (i in 1:4){
+    new_data.Plant <- data.frame(Year=year, Treat=predictTreat[i])
+    predicted_Plant <- predict(model, newdata=new_data.Plant)
+    pred_list[i] <- predicted_Plant
+  }
+  # returns a vector of the predicted plant value for each treatment at a given year
+  pred_list
+}
+
+##---- predictPlantDF(): return a tsibble df of four rows (treatments) and 12 columns (plants) ----##
+predictPlantDF <- function(year){
+  new.df <- data.frame(Year = rep(year, 4),
+                       Treat = c("B", "H", "HB", "C"),
+                       Heather = predictPlant(dataGrouped$Heather, year)[1:4],
+                       Exotic.dicots = predictPlant(dataGrouped$Exotic.dicots, year)[1:4],
+                       Exotic.monocots = predictPlant(dataGrouped$Exotic.monocots, year)[1:4],
+                       Native.dicots = predictPlant(dataGrouped$Native.dicots, year)[1:4],
+                       Native.monocots = predictPlant(dataGrouped$Native.monocots, year)[1:4],
+                       Bryophytes = predictPlant(dataGrouped$Bryophytes, year)[1:4],
+                       Lichen = predictPlant(dataGrouped$Lichen, year)[1:4],
+                       Clubmoss = predictPlant(dataGrouped$Clubmoss, year)[1:4],
+                       bare = predictPlant(dataGrouped$bare, year)[1:4],
+                       litter = predictPlant(dataGrouped$litter, year)[1:4])
+  #creates a new tsibble of 4 rows (one for each treatment) and 12 columns (for the different variables)
+  tsibble(new.df, key=Treat, index=Year)
+}
+
+colours <- c("Heather" = "#d091e5", "Native.dicots" = "#af3d08", "Native.monocots"="#d5e062",
+             "Exotic.dicots"="#38d6c8", "Exotic.monocots"="#08af3d", "Bryophytes"="#fea035", 
+             "Lichen"="#ddff9d", "Clubmoss"="#ee6cdc", "bare"="#a4a3a2", "litter"="#5c3711")
+
+for(i in 2013:2050){
+  dataGrouped <- bind_rows(dataGrouped, predictPlantDF(i))
+}
+
+ui <- fluidPage(
+  titlePanel("Estimation of Plant Groundcover at Tongariro"),
+  sidebarLayout(
+    sidebarPanel(
+      selectInput(inputId = "userPlant",
+                  label = "Select what plant to estimate",
+                  choices = c("Heather", "Exotic.dicots", "Exotic.monocots", "Native.dicots",
+                              "Native.monocots", "Bryophytes", "Lichen", "Clubmoss",
+                              "bare", "litter"), selected="Heather"),
+      sliderInput(inputId = "userYear",
+                  label = "Select the year you want to estimate",
+                  min=2013, max=2050, value=2013)
+    ),
+    mainPanel(plotOutput("plot"),
+              tableOutput("table")
+              )
+  )
+)
+
+server <- function(input, output){
+  output$table <- renderTable({
+    rt <- cbind(dataGrouped["Year"], dataGrouped["Treat"], dataGrouped[input$userPlant])
+    rt[rt$Year==input$userYear,]
+  })
+  
+  output$plot <- renderPlot({
+      dataGrouped <- dataGrouped %>%
+        filter(Year <= input$userYear)
+      if(input$userPlant=="Heather"){p <- ggplot(dataGrouped, aes(Year, 100*Heather))}
+      if(input$userPlant=="Exotic.dicots"){p <- ggplot(dataGrouped, aes(Year, 100*Exotic.dicots))}
+      if(input$userPlant=="Exotic.monocots"){p <- ggplot(dataGrouped, aes(Year, 100*Exotic.monocots))}
+      if(input$userPlant=="Native.dicots"){p <- ggplot(dataGrouped, aes(Year, 100*Native.dicots))}
+      if(input$userPlant=="Native.monocots"){p <- ggplot(dataGrouped, aes(Year, 100*Native.monocots))}
+      if(input$userPlant=="Bryophytes"){p <- ggplot(dataGrouped, aes(Year, 100*Bryophytes))}
+      if(input$userPlant=="Lichen"){p <- ggplot(dataGrouped, aes(Year, 100*Lichen))}
+      if(input$userPlant=="Clubmoss"){p <- ggplot(dataGrouped, aes(Year, 100*Clubmoss))}
+      if(input$userPlant=="bare"){p <- ggplot(dataGrouped, aes(Year, 100*bare))}
+      if(input$userPlant=="litter"){p <- ggplot(dataGrouped, aes(Year, 100*litter))}
+      p + geom_line(aes(linetype=Treat, colour=input$userPlant)) +
+      labs(title=paste("Average Proportion of", input$userPlant," under Treatments"),
+           y="Average Groundcover (%)") +
+      ylim(0, 100) +
+      geom_vline(xintercept=2012) +
+      scale_colour_manual(values=colours) +
+      annotate("text", x=2009, y=80, label="Actual data") +
+      annotate("text", x=(2013 + (input$userYear-2013)/2), y=80, label="Predicted data") +
+      theme_minimal()
+  })
+}
+
+shinyApp(ui=ui, server=server)
+```
